@@ -15,5 +15,5 @@ __pycache__
 
 .DS_Store
 
-env/
-app/gis_app/geo_backend/data/
+project/env/
+project/app/gis_app/geo_backend/data/
