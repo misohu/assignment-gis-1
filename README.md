@@ -12,16 +12,12 @@ Build a map-based application, which lets the user see geo-based data on a map a
 
 - Showing bicykle roads on a map. The roads are color-coded based on the road difficulty. The user can see various lists which help her choose an appropriate road, e.g. roads that cross a river, roads that are nearby lakes, roads that pass through multiple countries, etc.
 
-## Data sources
-
-- [Open Street Maps](https://www.openstreetmap.org/)
-
 ## My project
 
-Fill in (either in English, or in Slovak):
+Worlds' nuclear reactor detonation zones.
 
-**Application description**: `<fill in>`
+**Application description**: Aplication displays all the nuclear reactor in the world from year 2017. In the application it is possible to see detonation zones after clicking on the reactor marker. Application provides short description of chosen reactor. In application you can find all the close reactors to chosen location. 
 
-**Data source**: `<fill in>`
+**Data source**: `https://datashare.is.ed.ac.uk/handle/10283/2464?show=full`
 
-**Technologies used**: `<fill in>`
+**Technologies used**: [Django](https://www.djangoproject.com/), postGIS, Javascript, [Docker](https://www.docker.com)

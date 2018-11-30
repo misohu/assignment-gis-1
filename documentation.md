@@ -1,62 +1,63 @@
-*This is a documentation for a fictional project, just to show you what I expect. Notice a few key properties:*
-- *no cover page, really*
-- *no copy&pasted assignment text*
-- *no code samples*
-- *concise, to the point, gets me a quick overview of what was done and how*
-- *I don't really care about the document length*
-- *I used links where appropriate*
-
 # Overview
-
-This application shows hotels in Bratislava on a map. Most important features are:
-- search by proximity to my current location
-- search by hotel name
-- intelligent ordering - by proximity and by hotel features
-- hotels on the map are color coded by their quality assigned in stars (standard)
+This applocation shows nuclear power plants in the world on the map. Most important features are: 
+- Clickable markers on the mat for more information about the plant. After clicking on the reactor two types of zones are displayed. Red is a one day impact after reactor explosion. Green one is an impact within 3 days after explosion.
+- Search closest reactors by clicking somewhere on the map. Ordering by proximity to chosen location.
+- Showing safe zones on the map.
+- Everything is assynchronous. 
 
 This is it in action:
 
 ![Screenshot](screenshot.png)
 
-The application has 2 separate parts, the client which is a [frontend web application](#frontend) using mapbox API and mapbox.js and the [backend application](#backend) written in [Rails](http://rubyonrails.org/), backed by PostGIS. The frontend application communicates with backend using a [REST API](#api).
+The application has 2 separate parts, the client which is a [frontend web application](#frontend) using mapbox API and mapbox.js and the [backend application](#backend) written in [Django](https://www.djangoproject.com/). Database is in PostGIS. The frontend application communicates with backend using a [REST API](#api).
 
 # Frontend
 
-The frontend application is a static HTML page (`index.html`), which shows a mapbox.js widget. It is displaying hotels, which are mostly in cities, thus the map style is based on the Emerald style. I modified the style to better highlight main sightseeing points, restaurants and bus stops, since they are all important when selecting a hotel. I also highlighted rails tracks to assist in finding a quiet location.
+The frontend application is a static HTML page (`/project/app/gis_app/geo_backend/templates/default.html`), which shows a mapbox.js widget with a sidebar at the left side. It is displaying nuclear reactors in the whole world. I use polygon layer in mapbox.gl to display all the danger zones after clicking on the reactor. 
 
-All relevant frontend code is in `application.js` which is referenced from `index.html`. The frontend code is very simple, its only responsibilities are:
-- detecting user's location, using the standard [web location API](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/Using_geolocation)
-- displaying the sidebar panel with hotel list and filtering controls, driving the user interaction and calling the appropriate backend APIs
-- displaying geo features by overlaying the map with a geojson layer, the geojson is provided directly by backend APIs
+All relevant frontend code is in the same html file. The frontend code responsibilities are:
+- detecting coursor location, using the standard [mapbox tool](https://www.mapbox.com/mapbox-gl-js/example/mouse-position/)
+- displaying the sidebar panel with reactor  list driving the user interaction.
+- displaying geo features by overlaying the map with a geojson layer, the geojson is provided directly by backend API.
+- I also used [mapbox popups](https://www.mapbox.com/mapbox-gl-js/example/popup-on-click/) to give better overwiev for chosen reactor.
 
 # Backend
 
-The backend application is written in Ruby on Rails and is responsible for querying geo data, formatting the geojson and data for the sidebar panel.
+The backend application is written in Django framework and is responsible for querying geo data, formatting the geojson and data for the sidebar panel.
 
 ## Data
+As data source I used [list of nuclear reactors for year 2017](https://datashare.is.ed.ac.uk/handle/10283/2464?show=full). I imported the shape file of mentioned list directly as a Django model to postgis database. As a tool I used django's [LayerMapping function](https://docs.djangoproject.com/en/2.1/ref/contrib/gis/tutorial/), which converts the shp file to conventional django model. You can find `Powerplant` table specification in `/project/app/gis_app/geo_backend/models.py`. I generate geojson for mapbox layers directly in postgrs query by using a standard `st_asgeojson` function, however some postprocessing is necessary. You  can find all the queries in `/project/app/gis_app/geo_backend/views.py`.
 
-Hotel data is coming directly from Open Street Maps. I downloaded an extent covering whole Slovakia (around 1.2GB) and imported it using the `osm2pgsql` tool into the standard OSM schema in WGS 84 with hstore enabled. To speedup the queries I created an index on geometry column (`way`) in all tables. The application follows standard Rails conventions and all queries are placed in models inside `app/models`, mostly in `app/models/hotel.rb`. GeoJSON is generated by using a standard `st_asgeojson` function, however some postprocessing is necessary (in `app/controllers/search_controller.rb`) in order to merge all hotels into a single geojson.
+## Deployment
+The whole project is organised into two [Docker](https://www.docker.com/) containers. First one `db` is used for postgis database and the second one `backend` is for django server. All necessary python librarries are listed in `project/app/requirements/development.pip`. To run all services just run `docker-compose up` from `/project` directory.
+
+To import data dowload the [source data](https://datashare.is.ed.ac.uk/handle/10283/2464?show=full). Locate the `.shp` file into `/project/app/gis_app/geo_backend/data/NuclearReactors2011.shp`. Make sure containers are running (`docker-compose up` from `/project`) go to django console by runnig:
+
+```
+$ docker-compose run backend shell
+```
+
+And execute prepared script:
+
+```
+>>> from geo_backend import load
+>>> load.run()
+>>> quit() # to leave the console
+```
 
 ## Api
 
-**Find hotels in proximity to coordinates**
+**Find polygons for chosen nuclear reactor**
 
-`GET /search?lat=25346&long=46346123`
+`GET /polygon?lat=25346&long=46346123`
 
-**Find hotels by name, sorted by proximity and quality**
+**Find nearest reactors for chosen location**
 
-`GET /search?name=hviezda&lat=25346&long=46346123`
+`GET /surroundings?lat=25346&long=46346123`
+
+**Find all danger zones**
+
+`GET /all_plants`
 
 ### Response
-
-API calls return json responses with 2 top-level keys, `hotels` and `geojson`. `hotels` contains an array of hotel data for the sidebar, one entry per matched hotel. Hotel attributes are (mostly self-evident):
-```
-{
-  "name": "Modra hviezda",
-  "style": "modern", # cuisine style
-  "stars": 3,
-  "address": "Panska 31"
-  "image_url": "/assets/hotels/652.png"
-}
-```
-`geojson` contains a geojson with locations of all matched hotels and style definitions.
+Api calls returns direct geojson data. Depending on scenario data is being displayed directly to the map or some post processing is made to prepare html for the sidebar at the client side. 
