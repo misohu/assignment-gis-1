@@ -16,8 +16,8 @@ Build a map-based application, which lets the user see geo-based data on a map a
 
 Worlds' nuclear reactor detonation zones.
 
-**Application description**: Aplication displays all the nuclear reactor in the world from year 2017. In the application it is possible to see detonation zones after clicking on the reactor marker. Application provides short description of chosen reactor. In application you can find all the close reactors to chosen location. 
+**Application description**: Aplication displays all the nuclear reactor in the world from year 2011. In the application it is possible to see detonation zones after clicking on the reactor marker. Application provides short description of chosen reactor. In application you can find all the close reactors to chosen location. Application provides count of dengerous reactors for each state. It also shows areas of states.
 
-**Data source**: `https://datashare.is.ed.ac.uk/handle/10283/2464?show=full`
+**Data sources**: `https://datashare.is.ed.ac.uk/handle/10283/2464?show=full`, `https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/`
 
 **Technologies used**: [Django](https://www.djangoproject.com/), postGIS, Javascript, [Docker](https://www.docker.com)

@@ -4,6 +4,8 @@ This applocation shows nuclear power plants in the world on the map. Most import
 - Search closest reactors by clicking somewhere on the map. Ordering by proximity to chosen location.
 - Showing safe zones on the map.
 - Everything is assynchronous. 
+- Showig counts of dangerous reactors per state. 
+- Showing states of world.
 
 This is it in action:
 
@@ -26,14 +28,15 @@ All relevant frontend code is in the same html file. The frontend code responsib
 The backend application is written in Django framework and is responsible for querying geo data, formatting the geojson and data for the sidebar panel.
 
 ## Data
-As data source I used [list of nuclear reactors for year 2017](https://datashare.is.ed.ac.uk/handle/10283/2464?show=full). I imported the shape file of mentioned list directly as a Django model to postgis database. As a tool I used django's [LayerMapping function](https://docs.djangoproject.com/en/2.1/ref/contrib/gis/tutorial/), which converts the shp file to conventional django model. You can find `Powerplant` table specification in `/project/app/gis_app/geo_backend/models.py`. I generate geojson for mapbox layers directly in postgrs query by using a standard `st_asgeojson` function, however some postprocessing is necessary. You  can find all the queries in `/project/app/gis_app/geo_backend/views.py`.
+As data source I used [list of nuclear reactors for year 2017](https://datashare.is.ed.ac.uk/handle/10283/2464?show=full) and [Polygons of states of world](https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/). I imported the shape file of mentioned list directly as a Django model to postgis database. As a tool I used django's [LayerMapping function](https://docs.djangoproject.com/en/2.1/ref/contrib/gis/tutorial/), which converts the shp file to conventional django model. You can find `Powerplant` table specification in `/project/app/gis_app/geo_backend/models.py`. I generate geojson for mapbox layers directly in postgrs query by using a standard `st_asgeojson` function, however some postprocessing is necessary. You can find all the queries in `/project/app/gis_app/geo_backend/views.py`.
 
 ## Deployment
 The whole project is organised into two [Docker](https://www.docker.com/) containers. First one `db` is used for postgis database and the second one `backend` is for django server. All necessary python librarries are listed in `project/app/requirements/development.pip`. To run all services just run `docker-compose up` from `/project` directory.
 
-To import data dowload the [source data](https://datashare.is.ed.ac.uk/handle/10283/2464?show=full). Locate the `.shp` file into `/project/app/gis_app/geo_backend/data/NuclearReactors2011.shp`. Make sure containers are running (`docker-compose up` from `/project`) go to django console by runnig:
+To import data dowload the [source data](https://datashare.is.ed.ac.uk/handle/10283/2464?show=full) and [here](https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/). Locate zips into `/project/app/gis_app/geo_backend/data/NuclearReactors2011.shp` and unzip. Make sure containers are running (`docker-compose up` from `/project`) go to django console by runnig:
 
 ```
+$ docker-compose run backend migrate 
 $ docker-compose run backend shell
 ```
 
@@ -41,7 +44,8 @@ And execute prepared script:
 
 ```
 >>> from geo_backend import load
->>> load.run()
+>>> load.run_plants()
+>>> load.run_states()
 >>> quit() # to leave the console
 ```
 
@@ -59,5 +63,26 @@ And execute prepared script:
 
 `GET /all_plants`
 
+**Get counts per state**
+
+To speed up this query separate table has been crated with:
+```
+CREATE TABLE state_reactors AS
+      SELECT states.sovereignt, count(*) as count
+      FROM geo_backend_worldstates as states
+      JOIN geo_backend_powerplant as plants
+      ON st_intersects(
+        states.geom, st_buffer(
+          plants.mpoly::geography, 500000, 'quad_segs=8'))
+      GROUP BY states.sovereignt
+```
+
+`GET /all_states`
+
+**Get state polygon**
+
+
+`GET /state?state='Slovakia'`
+
 ### Response
-Api calls returns direct geojson data. Depending on scenario data is being displayed directly to the map or some post processing is made to prepare html for the sidebar at the client side. 
+Api calls returns directs geojson data. Depending on scenario data is being displayed directly to the map or some post processing is made to prepare html for the sidebar at the client side. 
